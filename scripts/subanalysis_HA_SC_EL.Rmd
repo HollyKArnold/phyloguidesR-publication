@@ -1,0 +1,350 @@
+---
+title: "subanalysis_HA_SC_EL"
+author: "Emma Little"
+date: "2025-07-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r download PRJNA933120 reads from NCBI}
+#access PIMMA
+.libPaths(c(.libPaths(), "/nfs3/Sharpton_Lab/tmp/src/arnoldhk/R/x86_64-conda-linux-gnu-library/4.1/"))
+library(PIMMA)
+
+#access prefetch
+Sys.setenv(PATH = paste("/local/cqls/opt/x86_64/bin", Sys.getenv("PATH"), sep = ":"))
+
+#download PRJNA933120 (long and short reads)
+PIMMA::getSRA("/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/SRR_Acc_List.txt", "/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/PRJNA933120/") #path to SRA accession list, output folder
+```
+
+```{r metadata}
+write.table(file="/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/metadata/SraRunTable", x = SraRunTable, quote=FALSE, row.names = FALSE, sep = "\t")
+```
+
+START SHORT READ PROCESSING
+
+```{r PIMMA for short reads}
+#get_quality_reads
+quality_reads_16S = PIMMA::get_quality_reads(
+  params.path = "/nfs3/Sharpton_Lab/prod/prod_restructure/projects/arnoldhk/2022PIMMA/PIMMA/data-raw/pathOptionsFile/optionsFile.txt",
+  metadata.path = "/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/metadata/SraRunTable",
+  fastq.directory.path = "/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/PRJNA933120/fastq/Illumina_shortreads/", 
+  output.directory.path = "/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/pimma_shortreads/", 
+  project.name = "subanalysis_HA_SC_EL", 
+  forward_primer = "CCTACGGGNGGCWGCAG", #forward primer used: 16S Amplicon Bakt_341F 
+  reverse_primer = "GACTACHVGGGTATCTAATCC", #reverse primer used: 16S Amplicon Bakt_805R 
+  forward_primer_start = 341, 
+  reverse_primer_start = 805, 
+  forward_tail_pattern = "_1.fastq.gz",
+  reverse_tail_pattern = "_2.fastq.gz",
+  base_tail_pattern = "_[12].fastq.gz",
+  paired = TRUE, 
+  raw_file_mapping = "Run", #change this to the column name with SRR numbers
+  cores = 1, # keep below 20
+  coresAdapt = 1, #keep below 20
+  thresh = 1000) # exclude files from further analysis if < 1000 reads.
+
+#run_dada2
+ps_subanalysis_HASCEL_12 = PIMMA::run_dada2(env = quality_reads_16S, fwd_trim_length = 275, rev_trim_length = 190, merge = TRUE, maxEE = c(2,2), save = TRUE, pool = FALSE, cores = 100) #forward and reverse
+
+ps_subanalysis_HASCEL_16 = PIMMA::run_dada2(env = quality_reads_16S, fwd_trim_length = 275, merge = FALSE, maxEE = c(2), save = TRUE, pool = FALSE, cores = 100) #forward
+
+#Parameter sweep
+#1) f = 200, r = 100 -> 25 ASVs
+#2) f = 200, r = 125 -> 24 ASVs
+#3) f = 200, r = 150 -> 30 ASVs 
+#4) f = 225, r = 150 -> 34 ASVs
+#5) f = 235, r = 150 -> 30 ASVs
+#6) f = 225, r = 170 -> 37 ASVs
+#7) f = 225, r = 170, maxEE = c(3,3) -> 37 ASVs
+#8) f = 250, r = 180 -> 2178 ASVs, avg read depth 49665, min read depth 8191, max read depth 185541
+#9) f = 240, r = 175 -> 1601 ASVs, avg read depth 27430, min read depth 1823, max read depth 166439
+#10) f = 245, r = 170 -> 1784 ASVs, avg read depth 27360, min read depth 1829, max read depth 165727
+#11) f = 240, r = 170 -> 36 ASVs
+#12) f = 275, r = 190 -> 3247 ASVs, avg read depth 79293, min read depth 23546, max read depth 227990, reads retained 57%
+#13) f = 275, r = 200 -> 3113 ASVs, avg read depth 77196, min read depth 23397, max read depth 223213 
+#14) f = 280, r = 200 -> 3071 ASVs, reads retained 54%
+#15) f = 280, merge = FALSE -> ASVs 3823, reads retained 61%, avg read depth 85850, min read depth 24682, max read depth 250890
+#16) f = 275, merge = FALSE -> ASVs 3853, reads retained 63%, avg read depth 88004, min read depth 25436, max read depth 255656
+
+#From Buetas et al. 2024: avg read depth close to 100,000 for these Illumina short reads.
+```
+
+```{r manually creating collector's curves}
+asv_tab <- as(otu_table(ps_subanalysis_HASCEL_12), "matrix")
+asv_tabf <- as(otu_table(ps_subanalysis_HASCEL_16), "matrix")
+
+#library(vegan)
+rarecurve(asv_tab, step = 500, sample = min(rowSums(asv_tab))) #min read depth 23546- samples plateau before 23456
+rarecurve(asv_tabf, step = 500, sample = min(rowSums(asv_tabf))) 
+```
+
+```{r filter out short read eukaryotes and contaminants}
+library(dplyr)
+
+#forward and reverse filtering
+ps_subanalysis_HASCEL_12 <- ps_subanalysis_HASCEL_12 %>%
+  subset_taxa(
+    !is.na(Kingdom) &                        # remove NA at the kingdom/domain level
+    (Kingdom == "Bacteria" | Kingdom == "Archaea") &  # keep only Bacteria or Archaea
+    Family != "Mitochondria" &               # filter out mitochondria
+    Class != "Chloroplast"                   # filter out chloroplasts
+  )
+
+# forward filtering
+ps_subanalysis_HASCEL_16 <- ps_subanalysis_HASCEL_16 %>%
+  subset_taxa(
+    !is.na(Kingdom) &                        # remove NA at the kingdom/domain level
+    (Kingdom == "Bacteria" | Kingdom == "Archaea") &  # keep only Bacteria or Archaea
+    Family != "Mitochondria" &               # filter out mitochondria
+    Class != "Chloroplast"                   # filter out chloroplasts
+  )
+```
+
+```{r write out final short read ps objects}
+saveRDS(ps_subanalysis_HASCEL_12, file = "/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/RDS/ps_shortreads_12fr.rds")
+saveRDS(ps_subanalysis_HASCEL_16, file = "/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/RDS/ps_shortreads_16f.rds")
+```
+
+END OF SHORT READ PROCESSING, START LONG READ PROCESSING
+
+```{r long read PacBio}
+#tutorial: https://benjjneb.github.io/LRASManuscript/LRASms_fecal.html
+#library(dada2)
+```
+
+```{r remove long read primers}
+#path to cutadapt
+cutadapt <- "/local/cqls/opt/x86_64/bin/cutadapt"
+
+#input and output paths
+input_path <- "/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/PRJNA933120/fastq/PacBio_longreads/"
+output_path <- "/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/PRJNA933120/fastq/PacBio_longreads/cutadapt_trimmed"
+
+#input files
+fns <- list.files(input_path, pattern = "fastq.gz", full.names = TRUE)
+
+#output files
+fns.cut <- file.path(output_path, basename(fns))
+
+#primers
+F27 <- "AGRGTTYGATYMTGGCTCAG"       # 27F
+R1492 <- "RGYTACCTTGTTACGACTT"      # 1492R
+
+#reverse complements
+F27.RC <- dada2:::rc(F27)
+R1492.RC <- dada2:::rc(R1492)
+
+#cutadapt flags
+cutadapt.flags <- paste(
+  "-g", F27,       
+  "-a", R1492.RC,  
+  "-n", "2",       #two rounds of adapter removal
+  "--minimum-length", "100",         #keep reads >= 100 bp
+  "--discard-untrimmed"              #only keep reads with both primers
+)
+
+#run Cutadapt on each file
+for (i in seq_along(fns)) {
+  message("Trimming: ", basename(fns[i]))
+  system2(cutadapt, args = c(cutadapt.flags, "-o", fns.cut[i], fns[i]))
+}
+```
+
+```{r check primer presence before and after trimming}
+#library(Biostrings)
+#library(ShortRead)
+
+#define same primers
+FWD <- F27
+REV <- R1492
+
+#primer orientations
+allOrients <- function(primer) {
+  dna <- DNAString(primer)
+  orients <- c(
+    Forward = dna,
+    Complement = Biostrings::complement(dna),
+    Reverse = Biostrings::reverse(dna),
+    RevComp = Biostrings::reverseComplement(dna)
+  )
+  return(sapply(orients, toString))
+}
+
+FWD.orients <- allOrients(FWD)
+REV.orients <- allOrients(REV)
+
+#count primer hits
+primerHits <- function(primer, fn) {
+  fq <- readFastq(fn)
+  nhits <- vcountPattern(primer, sread(fq), fixed = FALSE)
+  return(sum(nhits > 0))
+}
+
+#primer hits for a file
+summarizePrimerHits <- function(fastq_file) {
+  FWD.hits <- sapply(FWD.orients, primerHits, fn = fastq_file)
+  REV.hits <- sapply(REV.orients, primerHits, fn = fastq_file)
+  df <- rbind(FWD = FWD.hits, REV = REV.hits)
+  return(df)
+}
+
+#check primer presence 
+message("Primer hits before trimming:")
+for (file in fns) {
+  message("File: ", basename(file))
+  print(summarizePrimerHits(file))
+}
+
+#check primer presence after trimming
+message("Primer hits after trimming:")
+for (file in fns.cut) {
+  message("File: ", basename(file))
+  print(summarizePrimerHits(file))
+}
+```
+
+```{r filter and trim (minimal)}
+#quality check
+
+plotQualityProfile(fns.cut[1])
+
+#output path for filtered reads
+filt_path <- file.path(output_path, "filtered")
+dir.create(filt_path)
+
+#output filenames
+fns.filt <- file.path(filt_path, basename(fns.cut))
+
+# Perform filtering -> parameters from https://benjjneb.github.io/LRASManuscript/LRASms_fecal.html
+out <- filterAndTrim(fns.cut, fns.filt,
+                     minQ = 3,
+                     minLen = 1000,          
+                     maxLen = 1600,
+                     maxEE = 2,
+                     maxN = 0,
+                     rm.phix = FALSE,
+                     multithread = TRUE,
+                     compress = TRUE)
+
+# Check summary
+print(head(out))
+
+#less stringent
+out2 <- filterAndTrim(fns.cut, fns.filt,
+                     minQ = 3,
+                     minLen = 1000,          
+                     maxLen = 1700,
+                     maxEE = 3,
+                     maxN = 1,
+                     rm.phix = FALSE,
+                     multithread = TRUE,
+                     compress = TRUE)
+
+#even less stringent
+out3 <- filterAndTrim(fns.cut, fns.filt,
+                      minQ = 2,               
+                      minLen = 950,           
+                      maxLen = 1700,          
+                      maxEE = 4,              
+                      maxN = 1,               
+                      rm.phix = FALSE,
+                      multithread = TRUE,
+                      compress = TRUE)
+
+print(head(out3))
+```
+
+```{r avg reads per sample}
+#From paper: "After quality check and filtering we were able to annotate a mean of 12,500 reads per sample in PacBio"
+
+mean(out[, "reads.in"]) #14949
+
+mean(out[, "reads.out"]) #9473
+
+mean(out2[, "reads.out"]) #9927
+
+mean(out3[, "reads.out"]) #11996 -> we will continue with out3
+```
+
+```{r avg read length}
+#From Buetas et al. 2024: PacBio sequences had a mean length of 1457 bp after filtering
+
+#sequence lengths for each file
+lens_list <- lapply(fns.filt, function(fn) {
+  fq <- readFastq(fn)
+  nchar(sread(fq))  
+})
+
+#combine all lengths into one vector
+all_lengths <- unlist(lens_list)
+
+#calculate mean length
+mean_length <- mean(all_lengths)
+
+#summary
+summary(all_lengths) #mean 1457 -> looks good
+```
+
+```{r run dada2}
+#dereplicate
+drp <- derepFastq(fns.filt)
+
+#learn errors (parameters from: https://benjjneb.github.io/LRASManuscript/LRASms_fecal.html)
+err <- learnErrors(drp, errorEstimationFunction = PacBioErrfun, BAND_SIZE = 32, multithread = TRUE)
+
+#plot errors
+plotErrors(err) 
+
+#infer ASVs
+dds <- dada(drp, err = err, BAND_SIZE = 32, multithread = TRUE)
+
+#make sequence table
+seqtab <- makeSequenceTable(dds)
+dim(seqtab) #120 14695
+
+#check chimeras
+seqtab.nochim <- removeBimeraDenovo(seqtab, method = "consensus")
+dim(seqtab.nochim) # 120 14315
+sum(seqtab.nochim) / sum(seqtab) #0.989
+
+#assign taxonomy
+tax <- assignTaxonomy(seqtab.nochim, "/fs1/home/pi/littleem/subanalysis_HK_SC_EL/silva_nr99_v138.1_train_set.fa.gz", multithread=TRUE)
+
+```
+
+```{r create long read phyloseq object}
+#change rownames to match
+SraRunTable <- as.data.frame(SraRunTable)
+rownames(SraRunTable) <- paste0(SraRunTable$Run, ".fastq.gz")
+
+ps_longreads <- phyloseq(otu_table(seqtab.nochim, taxa_are_rows = FALSE), tax_table(tax), sample_data(SraRunTable))
+```
+
+```{r filter out long read eukaryotes and contaminants}
+library(dplyr)
+
+ps_longreads <- ps_longreads %>%
+  subset_taxa(
+    !is.na(Kingdom) &                        # remove NA at the kingdom/domain level
+    (Kingdom == "Bacteria" | Kingdom == "Archaea") &  # keep only Bacteria or Archaea
+    Family != "Mitochondria" &               # filter out mitochondria
+    Class != "Chloroplast"                   # filter out chloroplasts
+  )
+
+#14315 taxa to 13873 taxa
+```
+
+```{r write out final long read ps object}
+saveRDS(ps_longreads, file = "/nfs4/BIOMED/Arnold_Lab/public_data/Emma/subanalysis_HA_SC_EL/RDS/ps_longreads.rds")
+```
+
+```{r subset down to same ASVs for short and long reads}
+#Holly or Emma?
+```
+
+

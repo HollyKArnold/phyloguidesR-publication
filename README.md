@@ -1,93 +1,198 @@
 # phyloguidesR-publication
+Hello! This git contains all scripts and data to reproduce figures associated with "Guide sequences build better trees and harmonize regional datasets". 
+
+This paper introduces phyloguidesR - a work flow that researchers can use to build more accurate phylogenetic trees from short-read data, as well as to harmonize datasets across amplicon regions. 
+
+The companion PhyloguidesR tutorial site is located [here](https://github.com/HollyKArnold/phyloguidesR). 
+
+## Scripts
+If you would like to recreate analyses for the publication or are a reviewer, we recommend starting in the scripts folder, and looking at them in the following order. Indentations denote the case when one script calles a second. 
+
+1. Scripts for generating and validating guide sequences. Guide sequences are first curated, then extrapolated VRs are validated to ensure they match expected patterns of length, and entropy.
+
+- `curate_silva_seed_master.sh`: This script downloads sequences and curates them for use as guides.
+  - `curate_silva_seed_remove_eukaryotes.pl`: Removes eukaryotic sequences from guides as they are out of scope.
+- `calculate_entropy_V1.R`: Calculate entropy along the 16S gene (Figure 2B)
+- `guide_sequence_validation_V1`: Plot expected VR length vs. guide sequence VR length.
+  
+2. Scripts for generating short-read sequences
+
+- `simulate_sequences_seed_master.sh`: Simulate short-read sequences.
+  - `simulate_sequences_constant_legnth.pl`: Simulate short-read sequences of different lengths.
+  - `simulate_sequences_hvr.pl`: Simulate short-read sequences by variable region. 
+
+3. Some scripts for generating short-read alignments and trees. Short-read sequences are combined with or without guide sequences. If used in a mixed simulation, reads are mixed from VRs in equal proportions. 
+
+- `align_sequences_V2.R`: Aligns short-read sequences for hypotheses H1 - H4.
+  - `align_sequences_functions_V2.R`: Functions for `align_sequences_V2.R`.
+- `align_sequences_mix_V1.R`: Aligns short-read sequences for hypothesis H5. 
+  - `align_sequences_mix_functions_V1.R`: Functions for `align_sequences_mix_V1.R`.
+- `shuffle_sequences_V2.R`: A script to produce 100 randomly shuffled alignments per simulation.
+  `shuffled_ssequences_functions_V2.R`: Functions for `shuffle_sequences_V2.R`.
+- `maketree_sequences_V2.R`: Makes trees from input alignments. 
+  - `make_sequences_functions_V2.R`: Functions for `maketree_sequences_V2.R`. 
+  - The following files were used to build trees for all simulations: `tree_commands_mix_V2.sh`, `tree_commands_simulation_V2.sh`, `tree_commands_experimental_demo_V2.sh`, `tree_commands_experimental_demo_large_V2.sh`, `tree_commands_experimental_demo_guides_optimized_V2.sh`
+  
+4. Next, short-read trees were compared to long-read trees using global, local, and MAST metrics.
+- `sim_analysis_master_V5.R`: Compares trees made from short-reads to long read trees for all hypotheses (4A - 4E, and experimental data) . Produces plot Figure 2A VR lengths.
+  - `sim_analysis_functions_V2.R`: Functions for `sim_analysis_master_V5.R`. 
+
+4A. Hypothesis 1: Calculate distance between short-read trees and full-length control trees
+  
+  - `sim_analysis_jrf_random_pairs.R` Calculate JRF distance between short-read trees and full-length control trees.
+  - `sim_analysis_nye_random_pairs.R` Calculate Nye distance between short-read trees and full-length control trees.
+  - `sim_analysis_msd_random_pairs.R`: Calculate MSD distance between short-read trees and full-length control trees.
+  - `sim_analysis_pid_random_pairs.R`: Calculate PID distance between short-read trees and full-length control trees.
+  - `sim_analysis_mcd_random_pairs.R`: Calculate MCD distance between short-read trees and full-legnth control trees.
+  - `sim_analysis_path_random_pairings.R`: Calculate Path distance between short-read trees and full-legnth control trees.
+  - `sim_analysis_nanostructure_random_pairs.R`: Calculates cladal similarity of size 2, 3, ..., 10 of short-read and long-read trees.
+  - `sim_analysis_hvr_mast.R`: Calculates MAST of short-read and long-read trees. 
+
+4B. Hypothesis 2: Do guides improve accuracy across short-read trees across different read lengths? 
+
+  - `sim_analysis_bp_jrf_random_pairs.R`: Calculate JRF distance between short-read and full-length control trees across different short-read lengths.
+  - `sim_analysis_bp_nye_random_pairs.R`: Calculate Nye distance between short-read and full-length control trees across different short-read lengths.
+  - `sim_analysis_bp_msd_random_pairs.R`: Calculate MSD distance between short-read and full-length control trees across different short-read lengths.
+  - `sim_analysis_bp_pid_random_pairs.R`: Calculate PID distance between short-read and full-length control trees across different short-read lengths.
+  - `sim_analysis_bp_mcd_random_pairs.R`: Calculate MCD distance between short-read and full-length control trees across different short-read lengths.
+  - `sim_analysis_bp_path_random_pairs.R`: Calculate PATH distance between short-read and full-length control trees across different short-read lengths.
+  - `sim_analysis_bp_nanostructure_random_pairs_[2, ... 10].R`: Calculate similarity of sister pairs, triplets, ..., decuplets between long-read and short-read trees across VR and short-read lengths. 
+  - `sim_analysis_bp_mast.R`: Calculate MAST distance between short-read and full-length control trees across different short-read lengths.
+  
+4C. Hypothesis 3: Do guides allow for integration of overlapping VRs? 
+
+  - `sim_analysis_ov_jrf.R`: Calculate JRF distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls. 
+  - `sim_analysis_ov_nye.R`: Calculate Nye distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls. 
+  - `sim_analysis_ov_msd.R`: Calculate MSD distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls. 
+  - `sim_analysis_ov_pid.R`: Calculate PID distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls. 
+  - `sim_analysis_ov_mcd.R`: Calculate MCD distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls. 
+  - `sim_analysis_ov_path.R`: Calculate Path distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls. 
+  - `sim_analysis_ov_nanostructure_random_pairs_[2, ..., 10].R`: Calculate shared sister pairs, triplets, ..., decuplets between short-read trees compared to long-read trees for mixed overlapping regions and single region controls. 
+  - `sim_analysis_ov_mast.R`: Calculate Mast distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
 
 
+4D. Hypothesis 4: Do guides allow for integration of non-overlapping VRs? 
 
-## Getting started
+  - `sim_analysis_nonov_jrf.R`: Calculate JRF distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls. 
+  - `sim_analysis_nonov_nye.R`:  Calculate Nye distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls. 
+  - `sim_analysis_nonov_msd.R`:  Calculate MSD distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls. 
+  - `sim_analysis_nonov_pid.R`:  Calculate PID distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls. 
+  - `sim_analysis_nonov_mcd.R`: Calculate MCD distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls. 
+  - `sim_analysis_nonov_path.R`:  Calculate Path distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls. 
+  - `sim_analysis_nonov_nanostructure_random_pairs_[2, ..., 10].R`:  Calculate sister pairs, triplets, ..., sister decuplets between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls. 
+  - `sim_analysis_nonov_mast.R`:  Calculate MAST distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls. 
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+4E. Hypothesis 5: Do guides allow for mixing a diverse mix of VRs? 
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+  - `sim_analysis_nd_jrf.R`: Calculate JRF distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `scripts/sim_analysis_nd_nye.R`Calculate Nye distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `sim_analysis_nd_msd.R`: Calculate MSD distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `sim_analysis_nd_pid.R`: Calculate PID distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `sim_analysis_nd_mcd.R`: Calculate MCD distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `sim_analysis_nd_path.R`: Calculate path distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `sim_analysis_nd_nanostructure_random_pairs[2, .., 10].R`: Calculate percent shared sister pairs, triplets,..., decuplets between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `sim_analysis_nd_mast.R`: Calculate MAST distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  
+5. Demo with experimental data
 
-## Add your files
+  - `subanalysis_HA_SC_EL.Rmd`: Analysis pathway of quality filtering experimental data raw reads. 
+  - `experimental_demo_jrf_random_pairs.R`: Calculate JRF distances between short-read trees compared to long-read trees using experimental data. 
+  - `experimental_demo_nye_random_paris.R`: Calculate Nye distances between short-read trees compared to long-read trees using experimental data. 
+  - `experimental_demo_msd_random_pairs.R`: Calculate MSD distances between short-read trees compared to long-read trees using experimental data. 
+  - `experimental_demo_pid_random_pairs.R`: Calculate PID distances between short-read trees compared to long-read trees using experimental data. 
+  - `experimental_demo_mcd_random_pairs.R`: Calculate MCD distances between short-read trees compared to long-read trees using experimental data. 
+  - `experimental_demo_path_random_pairings.R`: Calculate Path distances between short-read trees compared to long-read trees using experimental data. 
+  - `experimental_demo_nanostructure_random_pairs.R`: Calculate sister pair similarity between short-read trees compared to long-read trees using experimental data. 
+  - `experimental_demo_mast_random_pairs.R`: Calculate Mast distances between short-read trees compared to long-read trees using experimental data. 
+  
+6. Data visualization
+  - `sim_analysis_visualization_V2.R`: Visualize results
+  - `sim_analysis_visualization_functions.R`: Functions ot visualize reuslts.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
 
-```
-cd existing_repo
-git remote add origin https://gitlab.cqls.oregonstate.edu/arnoldho/phyloguidesr-publication.git
-git branch -M main
-git push -uf origin main
-```
+## Data
+Data used to generate figures is stored in the data/ folder. Here are some brief descriptions of each datastructure.
 
-## Integrate with your tools
+- Introductory figures:
+    - `hvr_by_length.rds`: Length of each HVR for each guide sequence (Figure 2A VR Lengths)
+    
+- Hypothesis 1: Do guides improve accuracy of short-read trees at each VR? 
+  - `hvr_rf_random_pairs.rds`: RF distances of short-read trees compared to long-read trees for VRs. 
+  - `hvr_jrf_random_pairs.rds`: JRF distances of short-read trees compared to long-read trees for VRs.
+  - `hvr_nye_random_pairs.rds`: Nye distances of short-read trees compared to long-read trees for VRs.
+  - `hvr_msd_random_pairs.rds`: MSD distances of short-read trees compared to long-read trees for VRs.
+  - `hvr_pid_random_pairs.rds`: PID distances of short-read trees compared to long-read trees for VRs. 
+  - `hvr_mcd_random_pairs.rds`: MCD distances of short-read trees compared to long-read trees for VRs.
+  - `hvr_path_random_pairings.rds`: Path distance between short-read and long-read trees for VRs.
+  - `hvr_quartet_random_pairs.rds`: Quartet distances of short-read trees compared ot long-read trees for VRs. 
+  - `hvr_quartet_normalized_random_pairs.rds`: Normalized quartet distances of short-read trees compared to long-read trees for VRs.
+  - `hvr_s[2-10]_random_pairs.rds`: Cladal similarity of size 2, 3, ..., 10 of short-read and long-read trees for VRs. 
+  - `hvr_mast_random_pairs.rds`: MAST of short-read and long-read trees for VRs. 
 
-- [ ] [Set up project integrations](https://gitlab.cqls.oregonstate.edu/arnoldho/phyloguidesr-publication/-/settings/integrations)
+- Hypothesis 2: Do guides improve accuracy across short-read trees across different read lengths? 
+  - `bp_rf_random_pairs.rds`: RF distances of short-read trees compared to long-read trees for VRs across different lengths.  
+  - `bp_jrf_random_pairs.rds`: JRF distances of short-read trees compared to long-read trees for VRs across different lengths.  
+  - `bp_nye_random_pairs.rds`: Nye distances of short-read trees compared to long-read trees for VRs across different lengths. 
+  - `bp_msd_random_pairs.rds`: MSD distances of short-read trees compared to long-read trees for VRs across different lengths. 
+  - `bp_pid_random_pairs.rds`: PID distances of short-read trees compared to long-read trees for VRs across different lengths. 
+  - `bp_mcd_random_pairs.rds`: MCD distances of short-read trees compared to long-read trees for VRs across different lengths. 
+  - `bp_path_random_pairs.rds`: Path distances of short-read trees compared to long-read trees for VRs across different lengths. 
+  - `bp_quartet_normalized_random_pairs.rds`: Normalized quartet distances of short-read trees compared to long-read trees for VRs across different lengths. 
+  - `bp_quartet_normalized.rds`: Normalized quartet distances of short-read trees compared to long-read trees for VRs across different lengths. 
+  - `nanostructure_bp_[2, ..., 10]_random_pairs.rds`: Calculate similarity of sister pairs, triplets, ..., decuplets between long-read and short-read trees across VR and short-read lengths. 
+  - `bp_mast.rds`: Calculate MAST distance between short-read and full-length control trees across different short-read lengths.
+  
+- Hypothesis 3: Do guides allow for integration of overlapping VRs? 
+  - `ov_rf_random_pairs.rds`: RF distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
+  - `ov_jrf_random_pairs.rds`: JRF distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
+  - `ov_nye_random_pairs.rds`: Nye distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
+  - `ov_msd_random_pairs.rds`: MSD distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
+  - `ov_pid_random_pairs.rds`: PID distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
+  - `ov_mcd_random_pairs.rds`:MCD distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
+  - `ov_path_random_pairs.rds`: Path distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
+  - `ov_quartet_normalized_random_pairs.rds`: Normalized quartet distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
+  - `ov_quartet_random_pairs.rds`: Quartet distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
+  - `ov_nanoclusters_random_pairs_[2, .., 10].rds`: Percent shared sister pairs, triplets, ..., decuplets between short-read trees compared to long-read trees for mixed overlapping regions and single region controls. 
+  - `ov_mast_random_pairs.rds`: MAST distances between short-read trees compared to long-read trees for mixed overlapping regions and single region controls.
 
-## Collaborate with your team
+- Hypothesis 4: Do guides allow for integration of non-overlapping VRs? 
+  - `nonov_rf_random_pairs.rds`: RF distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `nonov_jrf_random_pairs.rds`:  JRF distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `nonov_nye_random_pairs.rds`:  Nye distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `nonov_msd_random_pairs.rds`:  MSD distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `nonov_pid_random_pairs.rds` PID distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `nonov_mcd_random_pairs.rds`:  MCD distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `nonov_path_random_pairs.rds`:  PATH distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `nonov_quartet_random_pairs.rds`:  Quartet distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `nonov_quartet_normalized_random_pairs.rds`:  Normalized quartet distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
+  - `nonov_nanostructure_[2, ..., 10]_random_pairs`: Shared sister pairs, triplets, ..., sister decuplets between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls. 
+  - `nonov_mast_random_pairs.rds`: Normalized MAST distances between short-read trees compared to long-read trees for mixed non-overlapping regions and single region controls.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+- Hypothesis 5: Do guides allow for mixing a diverse mix of VRs? 
+  - `nd_rf_random_pairs.rds`: RF distances between short-read trees compared to long-read trees for mixed regions and single region controls.
+  - `sim_analysis_nd_jrf.rds`: JRF distances between short-read trees compared to long-read trees for mixed regions and single region controls.
+  - `sim_analysis_nd_nye.rds`: Nye distances between short-read trees compared to long-read trees for mixed regions and single region controls.
+  - `sim_analysis_nd_msd.rds`: MSD distances between short-read trees compared to long-read trees for mixed regions and single region controls.
+  - `sim_analysis_nd_pid.rds`: PID distances between short-read trees compared to long-read trees for mixed regions and single region controls.
+  - `sim_analysis_nd_mcd.rds`: MCD distances between short-read trees compared to long-read trees for mixed regions and single region controls.
+  - `nsim_analysis_nd_path.rds`: Path distances between short-read trees compared to long-read trees for mixed regions and single region controls.
+  - `nd_quartet_random_pairs.rds`: Quartet distances between short-read trees compared to long-read trees for mixed regions and single region controls.
+  - `nd_quartet_normalized_random_pairs.rds`: Normalized quartet distances between short-read trees compared to long-read trees for mixed regions and single region controls.
+  - `nanostructure_nd_[2,...,10]_random_pairs.rds`: Percent shared sister pairs, triplets, ..., decuplets between short-read trees compared to long-read trees for mixed overlapping regions and single region controls. 
+  - `sim_analysis_nd_mast.R`: MAST distances between short-read trees compared to long-read trees for mixed regions and single region controls.
 
-## Test and Deploy
+- Experimental Data Demo
+  - `experimental_demo_ps_long_reads.rds`: Long read experimental data. 
+  - `experimental_demo_ps_shortreads_12fr.rds`: Short read experimental data. 
+   - `experimental_demo_rf_random_pairs.rds`: RF distances between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_jrf_random_pairs.rds`: JRF distances between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_nye_random_pairs.rds`: Nye distances between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_msd_random_pairs.rds`: MSD distances between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_pid_random_pairs.rds`: PID distances between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_mcd_random_pairs.rds`: MCD distances between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_path_random_pairings.rds`: Path distances between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_quartet.rds`: Quartet distances between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_quartet_normalized.rds`: Normalized quartet distances between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_subtrees_random_pairs.rds`: Similarity of sister pairs between short-read trees compared to long-read trees using experimental data. 
+   - `experimental_demo_mast_random_pairs.rds`: MAST distances between short-read trees compared to long-read trees using experimental data. 
 
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
